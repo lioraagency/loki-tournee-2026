@@ -362,7 +362,10 @@ async function loadStops(){
 
 // ---------- session anonyme + PIN ----------
 let { data: { session } } = await supabase.auth.getSession();
-if (!session) {
+if (!session || !session.user?.is_anonymous) {
+  if (session) {
+    await supabase.auth.signOut();
+  }
   const { data } = await supabase.auth.signInAnonymously();
   session = data.session;
 }
