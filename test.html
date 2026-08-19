@@ -177,6 +177,16 @@ const CATS = {
 const PROV_LABEL = {ON:'Ontario', MB:'Manitoba', SK:'Saskatchewan', AB:'Alberta', BC:'C.-Britannique'};
 const STATUT_LABEL = {confirme:'Recherche complétée', nouveau:'Nouvelle piste', clarifier:'À confirmer'};
 
+function escapeHtml(str){
+  if(str === null || str === undefined) return '';
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 let state = { cat: null, statut: null, prov: null, q: '' };
 let DATA = [];
 
@@ -212,8 +222,8 @@ function renderGrid(){
           <span class="card-cat-dot" style="background:${cat.color}"></span>
           ${d.vedette ? `<span class="main-event-badge small" title="Événement phare">★</span>` : ''}
           <div>
-            <h3>${d.nom}</h3>
-            <div class="loc">${d.ville} · ${PROV_LABEL[d.prov]}</div>
+            <h3>${escapeHtml(d.nom)}</h3>
+            <div class="loc">${escapeHtml(d.ville)} · ${escapeHtml(PROV_LABEL[d.prov])}</div>
           </div>
         </div>
       </div>
@@ -221,7 +231,7 @@ function renderGrid(){
         ${prioBadge}
         <span class="status-badge ${d.statut}">${STATUT_LABEL[d.statut]}</span>
       </div>
-      <div class="teaser">${d.pertinence}</div>
+      <div class="teaser">${escapeHtml(d.pertinence)}</div>
     </div>`;
   }).join('');
   grid.querySelectorAll('.card').forEach(el=>{
@@ -243,26 +253,26 @@ function openModal(id){
     <button class="modal-close" id="modalCloseBtn">✕</button>
     <div class="modal-header">
       <div class="modal-badges">${catBadge} ${prioBadge} ${statutBadge}</div>
-      <h2>${d.nom}</h2>
-      <div class="modal-loc">${d.ville} · ${PROV_LABEL[d.prov]}</div>
+      <h2>${escapeHtml(d.nom)}</h2>
+      <div class="modal-loc">${escapeHtml(d.ville)} · ${escapeHtml(PROV_LABEL[d.prov])}</div>
     </div>
     <div class="modal-body">
       <section>
         <h4>Pourquoi pertinent pour LOKI</h4>
-        <p>${d.pertinence}</p>
+        <p>${escapeHtml(d.pertinence)}</p>
       </section>
       <section>
         <h4>Adresse / contact</h4>
-        <p>${d.adresse}${d.contact && d.contact !== 'Non applicable' ? ' — ' + d.contact : ''}</p>
+        <p>${escapeHtml(d.adresse)}${d.contact && d.contact !== 'Non applicable' ? ' — ' + escapeHtml(d.contact) : ''}</p>
       </section>
       <section>
         <div class="callout-box ${d.statut==='clarifier'?'warn':''}">
-          <b>À noter :</b> ${d.notesMp}
+          <b>À noter :</b> ${escapeHtml(d.notesMp)}
         </div>
       </section>
       <section>
         <h4>Action requise / prochaine étape</h4>
-        <p>${d.action}</p>
+        <p>${escapeHtml(d.action)}</p>
       </section>
     </div>
   `;
@@ -289,14 +299,18 @@ loginBtn.addEventListener('click', async () => {
   if(!email) return;
   loginBtn.disabled = true;
   loginMsg.textContent = '';
-  const { error } = await supabase.auth.signInWithOtp({ email });
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
   loginBtn.disabled = false;
   loginMsg.textContent = error ? 'Erreur : ' + error.message : 'Lien envoyé — vérifiez votre courriel.';
 });
 
 async function loadStops(){
   const { data, error } = await supabase.from('stops').select('*').order('id');
-  if(error){ console.error(error); return; }
+  if(error){
+    console.error(error);
+    document.getElementById('grid').innerHTML = `<div class="empty-note">Impossible de charger les données, réessaie.</div>`;
+    return;
+  }
   // la table utilise notes_mp (snake_case) ; openModal lit d.notesMp
   DATA = (data || []).map(row => ({ ...row, notesMp: row.notes_mp }));
   renderGrid();
