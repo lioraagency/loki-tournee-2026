@@ -327,7 +327,7 @@ const supabase = createClient(
 );
 let DATA = [];
 async function loadStops(){
-  const { data, error } = await supabase.from('stops').select('*').order('id');
+  const { data, error } = await supabase.from('stops_public').select('*').order('id');
   if(error){ 
     document.getElementById('grid').innerHTML = 
       '<div class="empty-note">Impossible de charger les données. <button onclick="loadStops()">Réessayer</button></div>';
