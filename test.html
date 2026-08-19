@@ -310,7 +310,7 @@ loginBtn.addEventListener('click', async () => {
 });
 
 async function loadStops(){
-  const { data, error } = await supabase.from('stops').select('*').order('id');
+  const { data, error } = await supabase.from('stops_public').select('*').order('id');
   if(error){
     console.error(error);
     document.getElementById('grid').innerHTML = `<div class="empty-note">Impossible de charger les données, réessaie.</div>`;
