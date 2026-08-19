@@ -126,30 +126,30 @@
   }
   .callout-box.warn{border-left-color:var(--c-vigilance);}
 
-  /* ===== Écran de connexion (nouveau) ===== */
-  .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
-  .login-box{max-width:360px;width:100%;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:32px;text-align:center;}
-  .login-box h1{font-size:20px;margin-bottom:8px;}
-  .login-sub{color:var(--text-dim);font-size:13px;margin-bottom:20px;}
-  #loginEmail{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin-bottom:12px;font-size:14px;}
-  #loginBtn{width:100%;padding:10px 12px;border-radius:8px;border:none;background:var(--c-porsche);color:#fff;font-weight:700;cursor:pointer;font-size:14px;}
-  #loginBtn:disabled{opacity:0.6;cursor:not-allowed;}
-  .login-msg{margin-top:12px;font-size:13px;color:var(--text-dim);}
+  /* ===== PIN ===== */
+  .pin-box{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    background:var(--glass-bg-soft);border:1px solid var(--glass-border);border-radius:10px;
+    padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-dim);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  }
+  .pin-box input, .pin-box select{
+    padding:6px 8px;border-radius:6px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;
+  }
+  .pin-box input{width:70px;letter-spacing:0.2em;text-align:center;}
+  .pin-box button{
+    padding:6px 12px;border-radius:6px;border:none;background:var(--c-porsche);color:#fff;
+    font-weight:700;cursor:pointer;font-size:12.5px;font-family:inherit;
+  }
+  .pin-msg{font-size:12px;color:var(--text-faint);}
+  .pin-connected{color:#5fd39a;font-weight:700;}
 </style>
 </head>
 <body>
 
-<div class="login-screen" id="loginScreen">
-  <div class="login-box">
-    <h1>Connexion</h1>
-    <p class="login-sub">Entrez votre courriel pour recevoir un lien de connexion.</p>
-    <input type="email" id="loginEmail" placeholder="vous@exemple.com" autocomplete="email">
-    <button id="loginBtn">Recevoir un lien de connexion</button>
-    <p class="login-msg" id="loginMsg"></p>
-  </div>
-</div>
-
-<div class="wrap" id="appScreen" style="display:none;">
+<div class="wrap" id="appScreen">
+  <div class="pin-box" id="pinBox"></div>
   <div class="grid" id="grid"></div>
 </div>
 
@@ -189,6 +189,67 @@ function escapeHtml(str){
 
 let state = { cat: null, statut: null, prov: null, q: '' };
 let DATA = [];
+
+let currentPersonName = null;
+let pinUnlockedUntil = 0;
+const PIN_UNLOCK_MS = 20 * 60 * 1000;
+function isPinUnlocked(){
+  return Date.now() < pinUnlockedUntil;
+}
+let PIN_OPTIONS = [];
+async function loadPinOptions(){
+  const { data, error } = await supabase.from('user_pins_public').select('person_key, nom_affiche').order('nom_affiche');
+  if(error){ console.error(error); return; }
+  PIN_OPTIONS = data || [];
+}
+function updateEditUI(){
+  const unlocked = isPinUnlocked();
+  const pinBox = document.getElementById('pinBox');
+  if(unlocked){
+    pinBox.innerHTML = `<span class="pin-connected">Connecté comme : ${escapeHtml(currentPersonName)}</span>`;
+  } else {
+    const options = PIN_OPTIONS.map(p => `<option value="${escapeHtml(p.person_key)}">${escapeHtml(p.nom_affiche)}</option>`).join('');
+    pinBox.innerHTML = `
+      <select id="pinPersonSelect">${options}</select>
+      <input type="text" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••">
+      <button id="pinSubmitBtn">Déverrouiller</button>
+      <span class="pin-msg" id="pinMsg"></span>
+    `;
+    document.getElementById('pinSubmitBtn').addEventListener('click', submitPin);
+  }
+}
+async function submitPin(){
+  const personSelect = document.getElementById('pinPersonSelect');
+  const pinInput = document.getElementById('pinInput');
+  const pinMsg = document.getElementById('pinMsg');
+  const personKey = personSelect.value;
+  const pin = pinInput.value.trim();
+  pinInput.value = '';
+  if(!pin || !personKey) return;
+  try {
+    const { data, error } = await supabase.rpc('verify_pin', { p_person_key: personKey, p_pin: pin });
+    if(error){
+      pinMsg.textContent = error.message;
+      return;
+    }
+    if(data === true){
+      const person = PIN_OPTIONS.find(p => p.person_key === personKey);
+      currentPersonName = person ? person.nom_affiche : personKey;
+      pinUnlockedUntil = Date.now() + PIN_UNLOCK_MS;
+      updateEditUI();
+    } else {
+      pinMsg.textContent = (typeof data === 'string' && data) ? data : 'PIN incorrect.';
+    }
+  } catch(err){
+    pinMsg.textContent = 'Erreur : ' + (err && err.message ? err.message : 'la vérification a échoué.');
+  }
+}
+setInterval(() => {
+  if(pinUnlockedUntil && Date.now() >= pinUnlockedUntil){
+    pinUnlockedUntil = 0;
+    updateEditUI();
+  }
+}, 15000);
 
 // ---------- grid (copié tel quel de index.html) ----------
 function filteredData(){
@@ -287,28 +348,7 @@ document.getElementById('modalOverlay').addEventListener('click', (e)=>{
 });
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
 
-// ---------- auth (lecture seule) ----------
-const loginScreen = document.getElementById('loginScreen');
-const appScreen = document.getElementById('appScreen');
-const loginBtn = document.getElementById('loginBtn');
-const loginEmail = document.getElementById('loginEmail');
-const loginMsg = document.getElementById('loginMsg');
-
-loginBtn.addEventListener('click', async () => {
-  const email = loginEmail.value.trim();
-  if(!email) return;
-  loginBtn.disabled = true;
-  loginMsg.textContent = '';
-  try {
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-    loginMsg.textContent = error ? 'Erreur : ' + error.message : 'Lien envoyé — vérifiez votre courriel.';
-  } catch (err) {
-    loginMsg.textContent = 'Erreur : ' + (err && err.message ? err.message : 'la demande a échoué, réessaie.');
-  } finally {
-    loginBtn.disabled = false;
-  }
-});
-
+// ---------- chargement des fiches (lecture seule) ----------
 async function loadStops(){
   const { data, error } = await supabase.from('stops_public').select('*').order('id');
   if(error){
@@ -320,23 +360,16 @@ async function loadStops(){
   renderGrid();
 }
 
-async function showForSession(session){
-  if(session){
-    loginScreen.style.display = 'none';
-    appScreen.style.display = 'block';
-    await loadStops();
-  } else {
-    loginScreen.style.display = 'flex';
-    appScreen.style.display = 'none';
-  }
+// ---------- session anonyme + PIN ----------
+let { data: { session } } = await supabase.auth.getSession();
+if (!session) {
+  const { data } = await supabase.auth.signInAnonymously();
+  session = data.session;
 }
 
-supabase.auth.onAuthStateChange((_event, session) => {
-  showForSession(session);
-});
-
-const { data: { session } } = await supabase.auth.getSession();
-showForSession(session);
+await loadPinOptions();
+updateEditUI();
+await loadStops();
 </script>
 
 </body>
