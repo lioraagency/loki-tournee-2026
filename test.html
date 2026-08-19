@@ -197,7 +197,7 @@ function filteredData(){
     if(state.statut && d.statut !== state.statut) return false;
     if(state.prov && d.prov !== state.prov) return false;
     if(state.q){
-      const hay = (d.nom+' '+d.ville+' '+d.pertinence+' '+d.notesMp).toLowerCase();
+      const hay = (d.nom+' '+d.ville+' '+d.pertinence+' '+d.notes_mp).toLowerCase();
       if(!hay.includes(state.q.toLowerCase())) return false;
     }
     return true;
@@ -267,7 +267,7 @@ function openModal(id){
       </section>
       <section>
         <div class="callout-box ${d.statut==='clarifier'?'warn':''}">
-          <b>À noter :</b> ${escapeHtml(d.notesMp)}
+          <b>À noter :</b> ${escapeHtml(d.notes_mp)}
         </div>
       </section>
       <section>
@@ -316,8 +316,7 @@ async function loadStops(){
     document.getElementById('grid').innerHTML = `<div class="empty-note">Impossible de charger les données, réessaie.</div>`;
     return;
   }
-  // la table utilise notes_mp (snake_case) ; openModal lit d.notesMp
-  DATA = (data || []).map(row => ({ ...row, notesMp: row.notes_mp }));
+  DATA = data || [];
   renderGrid();
 }
 
