@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test lecture Supabase — page non liée</title>
+<style>
+  :root{
+    --bg:#0f1116;
+    --surface:#181b23;
+    --surface-2:#1f232d;
+    --border:#2a2e3a;
+    --border-soft:#232631;
+    --text:#f2f0e9;
+    --text-dim:#d7dbe2;
+    --text-faint:#b7bdc8;
+    --ink:#0f1116;
+    --ease-curve: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-dur: 0.2s;
+    --ease-dur-lg: 0.38s;
+
+    --c-porsche:#4100F5;      --t-porsche:#f2f0e9;
+    --c-golf:#1A9B2D;         --t-golf:#f2f0e9;
+    --c-contenu:#CDF564;      --t-contenu:#0f1116;
+    --c-automobile:#FF4632;   --t-automobile:#0f1116;
+    --c-contacts:#F037A5;     --t-contacts:#0f1116;
+    --c-sports:#42B3F3;       --t-sports:#0f1116;
+    --c-evenements:#6A2C70;   --t-evenements:#f2f0e9;
+    --c-vigilance:#FFB020;    --t-vigilance:#0f1116;
+
+    --glass-bg: rgba(26,30,40,0.52);
+    --glass-bg-soft: rgba(26,30,40,0.38);
+    --glass-border: rgba(255,255,255,0.12);
+    --glass-shadow: 0 24px 60px -16px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);}
+  body{
+    font-family:system-ui,-apple-system,sans-serif;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  h1,h2,h3{margin:0;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:24px;}
+
+  /* ===== Grid / cartes (copié de index.html) ===== */
+  .grid{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+  .card{
+    background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;
+    padding:16px 17px;cursor:pointer;position:relative;overflow:hidden;
+    border-left:3px solid var(--card-color, var(--glass-border));
+    transition:transform var(--ease-dur-lg) var(--ease-curve), border-color var(--ease-dur) var(--ease-curve), box-shadow var(--ease-dur-lg) var(--ease-curve);
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:var(--glass-shadow);
+    animation:cardIn var(--ease-dur-lg) var(--ease-curve) both;
+  }
+  @keyframes cardIn{ from{opacity:0; transform:translateY(10px) scale(0.98);} to{opacity:1; transform:translateY(0) scale(1);} }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-delay:0ms !important; transition-duration:0.001ms !important;}
+  }
+  .card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,0.28);box-shadow:0 30px 70px -14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:9px;}
+  .badge-row{display:flex;gap:6px;flex-wrap:wrap;}
+  .prio-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;letter-spacing:0.03em;flex-shrink:0;}
+  .prio-badge.P1{background:rgba(63,178,127,0.18);color:#5fd39a;}
+  .prio-badge.P2{background:rgba(232,163,61,0.18);color:#e8a33d;}
+  .prio-badge.P3{background:rgba(154,160,176,0.15);color:var(--text-faint);}
+  .status-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;letter-spacing:0.03em;}
+  .status-badge.confirme{background:rgba(63,178,127,0.18);color:#5fd39a;}
+  .status-badge.nouveau{background:rgba(66,179,243,0.18);color:#7fc4f5;}
+  .status-badge.clarifier{background:rgba(255,176,32,0.18);color:#ffb020;}
+  .card-cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+  .main-event-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;border-radius:50%;flex-shrink:0;
+    background:#E8C468;color:#1a1508;font-size:11px;line-height:1;
+    box-shadow:0 0 0 2px rgba(232,196,104,0.25);
+  }
+  .main-event-badge.small{width:16px;height:16px;font-size:9px;margin-top:2px;}
+  .card h3{font-size:16px;font-weight:600;line-height:1.25;margin-bottom:5px;}
+  .card .loc{font-size:11.5px;color:var(--text-faint);margin-bottom:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;}
+  .card .teaser{font-size:13px;color:var(--text-dim);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .empty-note{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-faint);font-size:14px;}
+
+  /* ===== Modal (copié de index.html) ===== */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(6,7,10,0.78);backdrop-filter:blur(6px);
+    display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;z-index:100;
+    overflow-y:auto;
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity var(--ease-dur-lg) var(--ease-curve), visibility var(--ease-dur-lg) var(--ease-curve);
+  }
+  .modal-overlay.open{opacity:1;visibility:visible;pointer-events:auto;}
+  .modal-overlay .modal{transform:translateY(10px) scale(0.97);transition:transform var(--ease-dur-lg) var(--ease-curve);}
+  .modal-overlay.open .modal{transform:translateY(0) scale(1);}
+  .modal{
+    background:rgba(24,27,36,0.72);border:1px solid var(--glass-border);border-radius:20px;
+    max-width:760px;width:100%;padding:0;position:relative;
+    backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);
+    box-shadow:0 40px 100px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .modal-close{
+    position:absolute;top:20px;right:20px;width:34px;height:34px;border-radius:50%;
+    background:rgba(255,255,255,0.08);border:1px solid var(--glass-border);color:var(--text-dim);
+    cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:5;
+  }
+  .modal-close:hover{color:var(--text);border-color:rgba(255,255,255,0.3);}
+  .modal-header{padding:38px 44px 24px;border-bottom:1px solid rgba(255,255,255,0.08);}
+  .modal-badges{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .badge{font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.03em;}
+  .modal-header h2{font-size:26px;font-weight:600;line-height:1.2;margin-bottom:6px;}
+  .modal-loc{color:var(--text-dim);font-size:14px;}
+  .modal-body{padding:26px 44px 40px;}
+  .modal-body section{margin-bottom:22px;}
+  .modal-body h4{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-faint);
+    font-weight:700;margin-bottom:8px;
+  }
+  .modal-body p{font-size:14.5px;color:var(--text);line-height:1.65;margin:0;}
+  .callout-box{
+    background:rgba(255,255,255,0.06);border-left:3px solid var(--c-porsche);border-radius:8px;
+    padding:14px 16px;font-size:13.5px;color:var(--text);line-height:1.55;
+  }
+  .callout-box.warn{border-left-color:var(--c-vigilance);}
+
+  /* ===== Écran de connexion (nouveau) ===== */
+  .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-box{max-width:360px;width:100%;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:32px;text-align:center;}
+  .login-box h1{font-size:20px;margin-bottom:8px;}
+  .login-sub{color:var(--text-dim);font-size:13px;margin-bottom:20px;}
+  #loginEmail{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin-bottom:12px;font-size:14px;}
+  #loginBtn{width:100%;padding:10px 12px;border-radius:8px;border:none;background:var(--c-porsche);color:#fff;font-weight:700;cursor:pointer;font-size:14px;}
+  #loginBtn:disabled{opacity:0.6;cursor:not-allowed;}
+  .login-msg{margin-top:12px;font-size:13px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h1>Connexion</h1>
+    <p class="login-sub">Entrez votre courriel pour recevoir un lien de connexion.</p>
+    <input type="email" id="loginEmail" placeholder="vous@exemple.com" autocomplete="email">
+    <button id="loginBtn">Recevoir un lien de connexion</button>
+    <p class="login-msg" id="loginMsg"></p>
+  </div>
+</div>
+
+<div class="wrap" id="appScreen" style="display:none;">
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://tkvordsxmhkjyrxeitwb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_50iHcx0nD3By-OOmm6rAGw_Xktd5FBm';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const CATS = {
+  'Porsche':     { color:'var(--c-porsche)',    label:'Porsche' },
+  'Golf':        { color:'var(--c-golf)',       label:'Golf' },
+  'Contenu':     { color:'var(--c-contenu)',    label:'Contenu' },
+  'Automobile':  { color:'var(--c-automobile)', label:'Automobile' },
+  'Contacts':    { color:'var(--c-contacts)',   label:'Contacts' },
+  'Sports':      { color:'var(--c-sports)',     label:'Sports' },
+  'Événements':  { color:'var(--c-evenements)', label:'Événements', text:'#f2f0e9' },
+  'Vigilance':   { color:'var(--c-vigilance)',  label:'Vigilance' },
+};
+const PROV_LABEL = {ON:'Ontario', MB:'Manitoba', SK:'Saskatchewan', AB:'Alberta', BC:'C.-Britannique'};
+const STATUT_LABEL = {confirme:'Recherche complétée', nouveau:'Nouvelle piste', clarifier:'À confirmer'};
+
+function escapeHtml(str){
+  if(str === null || str === undefined) return '';
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+let state = { cat: null, statut: null, prov: null, q: '' };
+let DATA = [];
+
+// ---------- grid (copié tel quel de index.html) ----------
+function filteredData(){
+  return DATA.filter(d=>{
+    if(state.cat && d.categorie !== state.cat) return false;
+    if(state.statut && d.statut !== state.statut) return false;
+    if(state.prov && d.prov !== state.prov) return false;
+    if(state.q){
+      const hay = (d.nom+' '+d.ville+' '+d.pertinence+' '+d.notes_mp).toLowerCase();
+      if(!hay.includes(state.q.toLowerCase())) return false;
+    }
+    return true;
+  });
+}
+
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  const items = filteredData();
+  if(items.length === 0){
+    grid.innerHTML = `<div class="empty-note">Aucune opportunité ne correspond à ces filtres.</div>`;
+    return;
+  }
+  grid.innerHTML = items.map((d, idx) => {
+    const cat = CATS[d.categorie] || {color:'#888'};
+    const prioBadge = d.priorite ? `<span class="prio-badge ${d.priorite}">${d.priorite}</span>` : '';
+    const delay = Math.min(idx * 25, 300);
+    return `
+    <div class="card" style="--card-color:${cat.color}; animation-delay:${delay}ms;" data-id="${d.id}">
+      <div class="card-top">
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <span class="card-cat-dot" style="background:${cat.color}"></span>
+          ${d.vedette ? `<span class="main-event-badge small" title="Événement phare">★</span>` : ''}
+          <div>
+            <h3>${escapeHtml(d.nom)}</h3>
+            <div class="loc">${escapeHtml(d.ville)} · ${escapeHtml(PROV_LABEL[d.prov])}</div>
+          </div>
+        </div>
+      </div>
+      <div class="badge-row" style="margin-bottom:8px;">
+        ${prioBadge}
+        <span class="status-badge ${d.statut}">${STATUT_LABEL[d.statut]}</span>
+      </div>
+      <div class="teaser">${escapeHtml(d.pertinence)}</div>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.card').forEach(el=>{
+    el.addEventListener('click', ()=>openModal(el.dataset.id));
+  });
+}
+
+// ---------- modal (copié tel quel de index.html) ----------
+function openModal(id){
+  const d = DATA.find(x=>x.id===id);
+  if(!d) return;
+  const cat = CATS[d.categorie] || {color:'#888'};
+  const prioBadge = d.priorite ? `<span class="badge" style="background:rgba(95,211,154,0.18);color:#5fd39a;">${d.priorite}</span>` : '';
+  const catBadge = `<span class="badge" style="background:${cat.color};color:${cat.text||'#0f1116'};">${cat.label}</span>`;
+  const vedetteBadge = d.vedette ? `<span class="main-event-badge" title="Événement phare">★</span>` : '';
+  const statutBadge = `<span class="badge status-badge ${d.statut}">${STATUT_LABEL[d.statut]}</span>`;
+  const modal = document.getElementById('modalContent');
+  modal.innerHTML = `
+    <button class="modal-close" id="modalCloseBtn">✕</button>
+    <div class="modal-header">
+      <div class="modal-badges">${catBadge} ${prioBadge} ${statutBadge}</div>
+      <h2>${escapeHtml(d.nom)}</h2>
+      <div class="modal-loc">${escapeHtml(d.ville)} · ${escapeHtml(PROV_LABEL[d.prov])}</div>
+    </div>
+    <div class="modal-body">
+      <section>
+        <h4>Pourquoi pertinent pour LOKI</h4>
+        <p>${escapeHtml(d.pertinence)}</p>
+      </section>
+      <section>
+        <h4>Adresse / contact</h4>
+        <p>${escapeHtml(d.adresse)}${d.contact && d.contact !== 'Non applicable' ? ' — ' + escapeHtml(d.contact) : ''}</p>
+      </section>
+      <section>
+        <div class="callout-box ${d.statut==='clarifier'?'warn':''}">
+          <b>À noter :</b> ${escapeHtml(d.notes_mp)}
+        </div>
+      </section>
+      <section>
+        <h4>Action requise / prochaine étape</h4>
+        <p>${escapeHtml(d.action)}</p>
+      </section>
+    </div>
+  `;
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+document.getElementById('modalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modalOverlay') closeModal();
+});
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+
+// ---------- auth (lecture seule) ----------
+const loginScreen = document.getElementById('loginScreen');
+const appScreen = document.getElementById('appScreen');
+const loginBtn = document.getElementById('loginBtn');
+const loginEmail = document.getElementById('loginEmail');
+const loginMsg = document.getElementById('loginMsg');
+
+loginBtn.addEventListener('click', async () => {
+  const email = loginEmail.value.trim();
+  if(!email) return;
+  loginBtn.disabled = true;
+  loginMsg.textContent = '';
+  try {
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    loginMsg.textContent = error ? 'Erreur : ' + error.message : 'Lien envoyé — vérifiez votre courriel.';
+  } catch (err) {
+    loginMsg.textContent = 'Erreur : ' + (err && err.message ? err.message : 'la demande a échoué, réessaie.');
+  } finally {
+    loginBtn.disabled = false;
+  }
+});
+
+async function loadStops(){
+  const { data, error } = await supabase.from('stops').select('*').order('id');
+  if(error){
+    console.error(error);
+    document.getElementById('grid').innerHTML = `<div class="empty-note">Impossible de charger les données, réessaie.</div>`;
+    return;
+  }
+  DATA = data || [];
+  renderGrid();
+}
+
+async function showForSession(session){
+  if(session){
+    loginScreen.style.display = 'none';
+    appScreen.style.display = 'block';
+    await loadStops();
+  } else {
+    loginScreen.style.display = 'flex';
+    appScreen.style.display = 'none';
+  }
+}
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  showForSession(session);
+});
+
+const { data: { session } } = await supabase.auth.getSession();
+showForSession(session);
+</script>
+
+</body>
+</html>
