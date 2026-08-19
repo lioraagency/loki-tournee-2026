@@ -299,9 +299,14 @@ loginBtn.addEventListener('click', async () => {
   if(!email) return;
   loginBtn.disabled = true;
   loginMsg.textContent = '';
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-  loginBtn.disabled = false;
-  loginMsg.textContent = error ? 'Erreur : ' + error.message : 'Lien envoyé — vérifiez votre courriel.';
+  try {
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    loginMsg.textContent = error ? 'Erreur : ' + error.message : 'Lien envoyé — vérifiez votre courriel.';
+  } catch (err) {
+    loginMsg.textContent = 'Erreur : ' + (err && err.message ? err.message : 'la demande a échoué, réessaie.');
+  } finally {
+    loginBtn.disabled = false;
+  }
 });
 
 async function loadStops(){
