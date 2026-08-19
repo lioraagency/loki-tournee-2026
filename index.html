@@ -315,6 +315,18 @@
   .confirm-modal .form-actions{display:flex;gap:10px;justify-content:center;}
   .confirm-modal .btn-danger{padding:9px 18px;border-radius:8px;border:none;background:#c0392b;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;}
 
+  /* ===== Boutons d'action mis en évidence ===== */
+  #pinSubmitBtn,
+  #addStopBtn,
+  #addStopSubmitBtn,
+  #modalEditBtn,
+  #editStopSubmitBtn,
+  #addNoteBtn,
+  #confirmDeleteBtn{
+    background-color:#FF4500;
+    color:#fff;
+  }
+
   @media (max-width: 720px){
     h1.title{font-size:26px;}
     .modal-header, .modal-body{padding-left:24px;padding-right:24px;}
@@ -609,7 +621,7 @@ function renderMap(){
 // ---------- pills / chips ----------
 function renderPills(){
   const wrap = document.getElementById('catPills');
-  let html = `<button class="pill ${state.cat===null?'active':''}" data-cat="" style="${state.cat===null?'background:var(--text);':''}">Toutes <span class="pill-count">${DATA.length}</span></button>`;
+  let html = `<button class="pill ${state.cat===null?'active':''}" data-cat="" style="${state.cat===null?'background:#90EE90;':''}">Toutes <span class="pill-count">${DATA.length}</span></button>`;
   CAT_ORDER.forEach(cat => {
     if(!DATA.some(d=>d.categorie===cat)) return;
     const count = DATA.filter(d=>d.categorie===cat).length;
@@ -834,7 +846,7 @@ function openAddForm(){
       <p class="form-msg" id="addFormMsg"></p>
       <div class="form-actions">
         <button type="button" class="btn-secondary" id="addCancelBtn">Annuler</button>
-        <button type="submit" class="btn-primary">Ajouter</button>
+        <button type="submit" class="btn-primary" id="addStopSubmitBtn">Ajouter</button>
       </div>
     </form>
   `;
@@ -917,7 +929,7 @@ function renderModalEdit(row){
       <p class="form-msg" id="editFormMsg"></p>
       <div class="form-actions">
         <button type="button" class="btn-secondary" id="editCancelBtn">Annuler</button>
-        <button type="submit" class="btn-primary">Enregistrer</button>
+        <button type="submit" class="btn-primary" id="editStopSubmitBtn">Enregistrer</button>
       </div>
     </form>
     <div id="notesSectionContainer"></div>
