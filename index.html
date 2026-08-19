@@ -279,6 +279,25 @@
     cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;z-index:5;
   }
   .modal-delete-btn:hover{background:rgba(255,70,50,0.24);}
+  .modal-edit-btn{
+    position:absolute;top:20px;right:108px;width:34px;height:34px;border-radius:50%;
+    background:rgba(255,255,255,0.08);border:1px solid var(--glass-border);color:var(--text-dim);
+    cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;z-index:5;
+  }
+  .modal-edit-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.3);}
+  .notes-section{padding:0 44px 40px;}
+  .notes-section h4{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-faint);
+    font-weight:700;margin-bottom:8px;
+  }
+  .note-item{border-bottom:1px solid rgba(255,255,255,0.08);padding:10px 0;}
+  .note-item p{margin:0;font-size:13.5px;color:var(--text);}
+  .note-item .note-auteur{margin:4px 0 0;font-size:11.5px;color:var(--text-faint);}
+  .note-add-row{display:flex;gap:8px;margin-top:10px;}
+  .note-add-row input{
+    flex:1;padding:9px 11px;border-radius:8px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-family:inherit;font-size:13.5px;
+  }
 
   .stop-form{display:flex;flex-direction:column;gap:12px;padding:38px 44px 40px;}
   .stop-form label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-faint);margin-bottom:5px;font-weight:700;}
@@ -684,9 +703,12 @@ function openModal(id){
   const vedetteBadge = d.vedette ? `<span class="main-event-badge" title="Événement phare">★</span>` : '';
   const statutBadge = `<span class="badge status-badge ${escapeHtml(d.statut)}">${STATUT_LABEL[d.statut]}</span>`;
   const modal = document.getElementById('modalContent');
-  const deleteBtn = isPinUnlocked() ? `<button class="modal-delete-btn" id="modalDeleteBtn" title="Supprimer">🗑️</button>` : '';
+  const unlocked = isPinUnlocked();
+  const deleteBtn = unlocked ? `<button class="modal-delete-btn" id="modalDeleteBtn" title="Supprimer">🗑️</button>` : '';
+  const editBtn = unlocked ? `<button class="modal-edit-btn" id="modalEditBtn" title="Modifier">✏️</button>` : '';
   modal.innerHTML = `
     <button class="modal-close" id="modalCloseBtn">✕</button>
+    ${editBtn}
     ${deleteBtn}
     <div class="modal-header">
       <div class="modal-badges">${catBadge} ${prioBadge} ${statutBadge}</div>
@@ -712,10 +734,13 @@ function openModal(id){
         <p>${escapeHtml(d.action)}</p>
       </section>
     </div>
+    <div id="notesSectionContainer"></div>
   `;
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-  if(isPinUnlocked()){
+  if(unlocked){
     document.getElementById('modalDeleteBtn').addEventListener('click', () => openDeleteConfirm(d.id));
+    document.getElementById('modalEditBtn').addEventListener('click', () => enterEditMode(d.id));
+    renderNotesSection(d.id);
   }
   document.getElementById('modalOverlay').classList.add('open');
 }
@@ -859,6 +884,137 @@ document.getElementById('addStopBtn').addEventListener('click', () => {
   if(!isPinUnlocked()) return;
   openAddForm();
 });
+
+// ---------- modification d'une fiche ----------
+async function enterEditMode(id){
+  if(!isPinUnlocked()) return;
+  const { data, error } = await supabase.from('stops').select('*').eq('id', id).single();
+  if(error){ console.error(error); return; }
+  renderModalEdit(data);
+}
+function renderModalEdit(row){
+  const modal = document.getElementById('modalContent');
+  const catOptions = CAT_ORDER.map(c => `<option value="${c}" ${c===row.categorie?'selected':''}>${CATS[c].label}</option>`).join('');
+  const v = (x) => escapeHtml(x ?? '');
+  modal.innerHTML = `
+    <button class="modal-close" id="modalCloseBtn">✕</button>
+    <form class="stop-form" id="editStopForm">
+      <h2>Modifier la fiche</h2>
+      <div><label for="e_nom">Nom</label><input id="e_nom" value="${v(row.nom)}" required></div>
+      <div><label for="e_categorie">Catégorie</label><select id="e_categorie">${catOptions}</select></div>
+      <div><label for="e_ville">Ville</label><input id="e_ville" value="${v(row.ville)}"></div>
+      <div><label for="e_prov">Province</label><input id="e_prov" value="${v(row.prov)}"></div>
+      <div><label for="e_priorite">Priorité</label><input id="e_priorite" value="${v(row.priorite)}"></div>
+      <div><label for="e_statut_tag">Statut (tag)</label><input id="e_statut_tag" value="${v(row.statut_tag)}"></div>
+      <div><label for="e_pertinence">Pertinence</label><input id="e_pertinence" value="${v(row.pertinence)}"></div>
+      <div><label for="e_adresse">Adresse</label><input id="e_adresse" value="${v(row.adresse)}"></div>
+      <div><label for="e_contact">Contact</label><input id="e_contact" value="${v(row.contact)}"></div>
+      <div><label for="e_contact_nom">Contact — nom</label><input id="e_contact_nom" value="${v(row.contact_nom)}"></div>
+      <div><label for="e_contact_role">Contact — rôle</label><input id="e_contact_role" value="${v(row.contact_role)}"></div>
+      <div><label for="e_contact_tel">Contact — téléphone</label><input id="e_contact_tel" value="${v(row.contact_tel)}"></div>
+      <div><label for="e_contact_courriel">Contact — courriel</label><input id="e_contact_courriel" value="${v(row.contact_courriel)}"></div>
+      <div><label for="e_action">Action</label><input id="e_action" value="${v(row.action)}"></div>
+      <p class="form-msg" id="editFormMsg"></p>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" id="editCancelBtn">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </div>
+    </form>
+    <div id="notesSectionContainer"></div>
+  `;
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('editCancelBtn').addEventListener('click', () => openModal(row.id));
+  document.getElementById('editStopForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveStopEdits(row.id);
+  });
+  renderNotesSection(row.id);
+}
+async function saveStopEdits(id){
+  if(!isPinUnlocked()) return;
+  const msg = document.getElementById('editFormMsg');
+  const nom = document.getElementById('e_nom').value.trim();
+  if(!nom){
+    msg.textContent = 'Le nom est requis.';
+    return;
+  }
+  const payload = {
+    nom,
+    categorie: document.getElementById('e_categorie').value,
+    ville: fieldOrNull('e_ville'),
+    prov: fieldOrNull('e_prov'),
+    priorite: fieldOrNull('e_priorite'),
+    statut_tag: fieldOrNull('e_statut_tag'),
+    pertinence: fieldOrNull('e_pertinence'),
+    adresse: fieldOrNull('e_adresse'),
+    contact: fieldOrNull('e_contact'),
+    contact_nom: fieldOrNull('e_contact_nom'),
+    contact_role: fieldOrNull('e_contact_role'),
+    contact_tel: fieldOrNull('e_contact_tel'),
+    contact_courriel: fieldOrNull('e_contact_courriel'),
+    action: fieldOrNull('e_action'),
+  };
+  const { error } = await supabase.from('stops').update(payload).eq('id', id);
+  if(error){
+    msg.textContent = 'Erreur : ' + error.message;
+    return;
+  }
+  await loadStops();
+  openModal(id);
+}
+
+// ---------- notes (additives, jamais de remplacement) ----------
+function renderNotesSection(stopId){
+  const container = document.getElementById('notesSectionContainer');
+  if(!container) return;
+  container.innerHTML = `
+    <section class="notes-section">
+      <h4>Notes</h4>
+      <div id="notesList"></div>
+      <div class="note-add-row">
+        <input type="text" id="newNoteInput" placeholder="Ajouter une note…">
+        <button class="btn-primary" id="addNoteBtn">Ajouter une note</button>
+      </div>
+      <p class="form-msg" id="noteFormMsg"></p>
+    </section>
+  `;
+  document.getElementById('addNoteBtn').addEventListener('click', () => addNote(stopId));
+  loadNotesList(stopId);
+}
+async function loadNotesList(stopId){
+  const list = document.getElementById('notesList');
+  if(!list) return;
+  const { data, error } = await supabase.from('notes').select('*').eq('stop_id', stopId).order('created_at', { ascending: false });
+  if(error){
+    list.innerHTML = `<p class="form-msg">Erreur : ${escapeHtml(error.message)}</p>`;
+    return;
+  }
+  if(!data || data.length === 0){
+    list.innerHTML = `<p style="color:var(--text-faint);font-size:13px;">Aucune note pour l'instant.</p>`;
+    return;
+  }
+  list.innerHTML = data.map(n => `
+    <div class="note-item">
+      <p>${escapeHtml(n.texte)}</p>
+      <p class="note-auteur">${escapeHtml(n.auteur)}</p>
+    </div>
+  `).join('');
+}
+async function addNote(stopId){
+  if(!isPinUnlocked()) return;
+  const input = document.getElementById('newNoteInput');
+  const msg = document.getElementById('noteFormMsg');
+  const texte = input.value.trim();
+  if(!texte) return;
+  const { error } = await supabase.from('notes').insert({ stop_id: stopId, texte, auteur: currentPersonName });
+  if(error){
+    msg.textContent = 'Erreur : ' + error.message;
+    return;
+  }
+  input.value = '';
+  msg.textContent = '';
+  await loadNotesList(stopId);
+}
 
 // ---------- déverrouillage PIN ----------
 function updateEditUI(){
