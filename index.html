@@ -328,10 +328,11 @@ const supabase = createClient(
 let DATA = [];
 async function loadStops(){
   const { data, error } = await supabase.from('stops_public').select('*').order('id');
-  if(error){ 
-    document.getElementById('grid').innerHTML = 
-      '<div class="empty-note">Impossible de charger les données. <button onclick="loadStops()">Réessayer</button></div>';
-    return; 
+  if(error){
+    document.getElementById('grid').innerHTML =
+      '<div class="empty-note">Impossible de charger les données. <button id="retryLoadBtn">Réessayer</button></div>';
+    document.getElementById('retryLoadBtn').addEventListener('click', loadStops);
+    return;
   }
   DATA = data;
   computeDotPositions();
@@ -557,7 +558,7 @@ function filteredData(){
     if(state.statut && d.statut !== state.statut) return false;
     if(state.prov && d.prov !== state.prov) return false;
     if(state.q){
-      const hay = (d.nom+' '+d.ville+' '+d.pertinence+' '+d.notes_mp).toLowerCase();
+      const hay = (d.nom+' '+(d.ville || '')+' '+(d.pertinence || '')+' '+(d.notes_mp || '')).toLowerCase();
       if(!hay.includes(state.q.toLowerCase())) return false;
     }
     return true;
@@ -589,7 +590,7 @@ function renderGrid(){
       </div>
       <div class="badge-row" style="margin-bottom:8px;">
         ${prioBadge}
-        <span class="status-badge ${d.statut}">${STATUT_LABEL[d.statut]}</span>
+        <span class="status-badge ${escapeHtml(d.statut)}">${STATUT_LABEL[d.statut]}</span>
       </div>
       <div class="teaser">${escapeHtml(d.pertinence)}</div>
     </div>`;
@@ -607,7 +608,7 @@ function openModal(id){
   const prioBadge = d.priorite ? `<span class="badge" style="background:rgba(95,211,154,0.18);color:#5fd39a;">${d.priorite}</span>` : '';
   const catBadge = `<span class="badge" style="background:${cat.color};color:${cat.text||'#0f1116'};">${cat.label}</span>`;
   const vedetteBadge = d.vedette ? `<span class="main-event-badge" title="Événement phare">★</span>` : '';
-  const statutBadge = `<span class="badge status-badge ${d.statut}">${STATUT_LABEL[d.statut]}</span>`;
+  const statutBadge = `<span class="badge status-badge ${escapeHtml(d.statut)}">${STATUT_LABEL[d.statut]}</span>`;
   const modal = document.getElementById('modalContent');
   modal.innerHTML = `
     <button class="modal-close" id="modalCloseBtn">✕</button>

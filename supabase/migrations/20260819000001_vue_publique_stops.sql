@@ -1,4 +1,4 @@
-create view stops_public with (security_invoker = true) as
+create view stops_public with (security_invoker = false) as
 select
   id, nom, categorie, statut, statut_tag, prov, priorite, ville, city_key,
   approx, pertinence, adresse, contact, notes_mp, action, vedette, updated_at
