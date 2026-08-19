@@ -249,6 +249,60 @@
   }
   .callout-box.warn{border-left-color:var(--c-vigilance);}
 
+  /* ===== Connexion / PIN / édition ===== */
+  .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-box{max-width:360px;width:100%;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:32px;text-align:center;backdrop-filter:blur(18px);}
+  .login-box h1{font-size:20px;margin-bottom:8px;}
+  .login-sub{color:var(--text-dim);font-size:13px;margin-bottom:20px;}
+  #loginEmail{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin-bottom:12px;font-size:14px;font-family:inherit;}
+  #loginBtn{width:100%;padding:10px 12px;border-radius:8px;border:none;background:var(--c-porsche);color:#fff;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit;}
+  #loginBtn:disabled{opacity:0.6;cursor:not-allowed;}
+  .login-msg{margin-top:12px;font-size:13px;color:var(--text-dim);}
+
+  .pin-box{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    background:var(--glass-bg-soft);border:1px solid var(--glass-border);border-radius:10px;
+    padding:10px 14px;margin-top:16px;font-size:13px;color:var(--text-dim);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  }
+  .pin-box input{
+    width:70px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:14px;letter-spacing:0.2em;text-align:center;font-family:inherit;
+  }
+  .pin-box button{
+    padding:6px 12px;border-radius:6px;border:none;background:var(--c-porsche);color:#fff;
+    font-weight:700;cursor:pointer;font-size:12.5px;font-family:inherit;
+  }
+  .pin-msg{font-size:12px;color:var(--text-faint);}
+
+  .add-stop-btn{
+    padding:8px 14px;border-radius:20px;border:1px solid var(--glass-border);background:var(--c-porsche);
+    color:#fff;font-weight:700;cursor:pointer;font-size:12.5px;font-family:inherit;
+  }
+
+  .modal-delete-btn{
+    position:absolute;top:20px;right:64px;width:34px;height:34px;border-radius:50%;
+    background:rgba(255,70,50,0.14);border:1px solid rgba(255,70,50,0.3);color:#ff8a75;
+    cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;z-index:5;
+  }
+  .modal-delete-btn:hover{background:rgba(255,70,50,0.24);}
+
+  .stop-form{display:flex;flex-direction:column;gap:12px;padding:38px 44px 40px;}
+  .stop-form label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-faint);margin-bottom:5px;font-weight:700;}
+  .stop-form input, .stop-form select{
+    width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:13.5px;font-family:inherit;
+  }
+  .stop-form .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px;}
+  .stop-form .btn-primary{padding:9px 18px;border-radius:8px;border:none;background:var(--c-porsche);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;}
+  .stop-form .btn-secondary{padding:9px 18px;border-radius:8px;border:1px solid var(--glass-border);background:none;color:var(--text-dim);cursor:pointer;font-family:inherit;}
+  .form-msg{font-size:12.5px;color:#ff8a75;min-height:16px;}
+
+  .confirm-modal{max-width:440px;padding:32px;text-align:center;}
+  .confirm-modal p{font-size:14.5px;color:var(--text);line-height:1.6;margin-bottom:22px;}
+  .confirm-modal .form-actions{display:flex;gap:10px;justify-content:center;}
+  .confirm-modal .btn-danger{padding:9px 18px;border-radius:8px;border:none;background:#c0392b;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;}
+
   @media (max-width: 720px){
     h1.title{font-size:26px;}
     .modal-header, .modal-body{padding-left:24px;padding-right:24px;}
@@ -259,7 +313,17 @@
 <body>
 <div class="hero-photo-layer" id="heroPhotoLayer"></div>
 
-<div class="wrap">
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h1>Connexion</h1>
+    <p class="login-sub">Entrez votre courriel pour recevoir un lien de connexion.</p>
+    <input type="email" id="loginEmail" placeholder="vous@exemple.com" autocomplete="email">
+    <button id="loginBtn">Recevoir un lien de connexion</button>
+    <p class="login-msg" id="loginMsg"></p>
+  </div>
+</div>
+
+<div class="wrap" id="mainWrap" style="display:none;">
   <header class="top">
     <div class="hero-panel">
       <div class="eyebrow">LOKI Coach · Tournée 2026 — Ontario &amp; Ouest canadien</div>
@@ -278,6 +342,8 @@
       <div class="stats-row" id="statsRow"></div>
     </div>
   </header>
+
+  <div class="pin-box" id="pinBox" style="display:none;"></div>
 
   <div class="map-section">
     <div class="map-card">
@@ -307,11 +373,23 @@
     </div>
   </div>
 
+  <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+    <button class="add-stop-btn" id="addStopBtn" style="display:none;">+ Ajouter une fiche</button>
+  </div>
+
   <div class="grid" id="grid"></div>
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="modal-overlay" id="addModalOverlay">
+  <div class="modal" id="addModalContent"></div>
+</div>
+
+<div class="modal-overlay" id="confirmModalOverlay">
+  <div class="modal confirm-modal" id="confirmModalContent"></div>
 </div>
 
 <script type="module">
@@ -334,12 +412,18 @@ async function loadStops(){
     document.getElementById('retryLoadBtn').addEventListener('click', loadStops);
     return;
   }
-  DATA = data;
+  DATA = (data || []).filter(d => !d.archived);
   computeDotPositions();
   renderStats();
   renderAll();
 }
-loadStops();
+
+let currentSessionEmail = null;
+let pinUnlockedUntil = 0;
+const PIN_UNLOCK_MS = 20 * 60 * 1000;
+function isPinUnlocked(){
+  return Date.now() < pinUnlockedUntil;
+}
 
 const CATS = {
   'Porsche':     { color:'var(--c-porsche)',    label:'Porsche' },
@@ -610,8 +694,10 @@ function openModal(id){
   const vedetteBadge = d.vedette ? `<span class="main-event-badge" title="Événement phare">★</span>` : '';
   const statutBadge = `<span class="badge status-badge ${escapeHtml(d.statut)}">${STATUT_LABEL[d.statut]}</span>`;
   const modal = document.getElementById('modalContent');
+  const deleteBtn = isPinUnlocked() ? `<button class="modal-delete-btn" id="modalDeleteBtn" title="Supprimer">🗑️</button>` : '';
   modal.innerHTML = `
     <button class="modal-close" id="modalCloseBtn">✕</button>
+    ${deleteBtn}
     <div class="modal-header">
       <div class="modal-badges">${catBadge} ${prioBadge} ${statutBadge}</div>
       <h2>${escapeHtml(d.nom)}</h2>
@@ -638,6 +724,9 @@ function openModal(id){
     </div>
   `;
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  if(isPinUnlocked()){
+    document.getElementById('modalDeleteBtn').addEventListener('click', () => openDeleteConfirm(d.id));
+  }
   document.getElementById('modalOverlay').classList.add('open');
 }
 function closeModal(){
@@ -646,7 +735,15 @@ function closeModal(){
 document.getElementById('modalOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'modalOverlay') closeModal();
 });
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+document.getElementById('addModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'addModalOverlay') closeAddForm();
+});
+document.getElementById('confirmModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'confirmModalOverlay') closeConfirmModal();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape'){ closeModal(); closeAddForm(); closeConfirmModal(); }
+});
 
 // ---------- search / reset ----------
 document.getElementById('searchBox').addEventListener('input', (e)=>{
@@ -668,6 +765,202 @@ function renderAll(){
 
 renderStats();
 renderAll();
+
+// ---------- suppression (soft-delete) ----------
+function openDeleteConfirm(stopId){
+  const el = document.getElementById('confirmModalContent');
+  el.innerHTML = `
+    <p>Êtes-vous certain de vouloir supprimer cette fiche de la tournée OUEST ?<br>Cette action est irréversible.</p>
+    <p class="form-msg" id="deleteMsg"></p>
+    <div class="form-actions">
+      <button class="btn-secondary" id="confirmCancelBtn">Annuler</button>
+      <button class="btn-danger" id="confirmDeleteBtn">Supprimer définitivement</button>
+    </div>
+  `;
+  document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirmModal);
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    await deleteStop(stopId);
+  });
+  document.getElementById('confirmModalOverlay').classList.add('open');
+}
+function closeConfirmModal(){
+  document.getElementById('confirmModalOverlay').classList.remove('open');
+}
+async function deleteStop(stopId){
+  if(!isPinUnlocked()) return;
+  const { error } = await supabase.from('stops').update({ archived: true }).eq('id', stopId);
+  if(error){
+    document.getElementById('deleteMsg').textContent = 'Erreur : ' + error.message;
+    return;
+  }
+  closeConfirmModal();
+  closeModal();
+  await loadStops();
+}
+
+// ---------- ajout d'une fiche ----------
+function openAddForm(){
+  const el = document.getElementById('addModalContent');
+  const catOptions = CAT_ORDER.map(c => `<option value="${c}">${CATS[c].label}</option>`).join('');
+  el.innerHTML = `
+    <button class="modal-close" id="addModalCloseBtn">✕</button>
+    <form class="stop-form" id="addStopForm">
+      <h2>Ajouter une fiche</h2>
+      <div><label for="f_categorie">Catégorie</label><select id="f_categorie" required>${catOptions}</select></div>
+      <div><label for="f_nom">Nom</label><input id="f_nom" required></div>
+      <div><label for="f_ville">Ville</label><input id="f_ville"></div>
+      <div><label for="f_prov">Province</label><input id="f_prov"></div>
+      <div><label for="f_priorite">Priorité</label><input id="f_priorite"></div>
+      <div><label for="f_pertinence">Pertinence</label><input id="f_pertinence"></div>
+      <div><label for="f_adresse">Adresse</label><input id="f_adresse"></div>
+      <div><label for="f_contact">Contact</label><input id="f_contact"></div>
+      <div><label for="f_notes_mp">Notes</label><input id="f_notes_mp"></div>
+      <div><label for="f_action">Action</label><input id="f_action"></div>
+      <p class="form-msg" id="addFormMsg"></p>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" id="addCancelBtn">Annuler</button>
+        <button type="submit" class="btn-primary">Ajouter</button>
+      </div>
+    </form>
+  `;
+  document.getElementById('addModalCloseBtn').addEventListener('click', closeAddForm);
+  document.getElementById('addCancelBtn').addEventListener('click', closeAddForm);
+  document.getElementById('addStopForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitNewStop();
+  });
+  document.getElementById('addModalOverlay').classList.add('open');
+}
+function closeAddForm(){
+  document.getElementById('addModalOverlay').classList.remove('open');
+}
+function fieldOrNull(id){
+  const v = document.getElementById(id).value.trim();
+  return v === '' ? null : v;
+}
+async function submitNewStop(){
+  if(!isPinUnlocked()) return;
+  const payload = {
+    id: crypto.randomUUID(),
+    categorie: document.getElementById('f_categorie').value,
+    nom: document.getElementById('f_nom').value.trim(),
+    ville: fieldOrNull('f_ville'),
+    prov: fieldOrNull('f_prov'),
+    priorite: fieldOrNull('f_priorite'),
+    pertinence: fieldOrNull('f_pertinence'),
+    adresse: fieldOrNull('f_adresse'),
+    contact: fieldOrNull('f_contact'),
+    notes_mp: fieldOrNull('f_notes_mp'),
+    action: fieldOrNull('f_action'),
+  };
+  if(!payload.nom){
+    document.getElementById('addFormMsg').textContent = 'Le nom est requis.';
+    return;
+  }
+  const { error } = await supabase.from('stops').insert(payload);
+  if(error){
+    document.getElementById('addFormMsg').textContent = 'Erreur : ' + error.message;
+    return;
+  }
+  closeAddForm();
+  await loadStops();
+}
+document.getElementById('addStopBtn').addEventListener('click', () => {
+  if(!isPinUnlocked()) return;
+  openAddForm();
+});
+
+// ---------- déverrouillage PIN ----------
+function updateEditUI(){
+  const unlocked = isPinUnlocked();
+  document.getElementById('addStopBtn').style.display = unlocked ? '' : 'none';
+  const pinBox = document.getElementById('pinBox');
+  if(unlocked){
+    pinBox.innerHTML = `<span>🔓 Modifications activées pour 20 minutes.</span>`;
+  } else {
+    pinBox.innerHTML = `
+      <span id="pinLabel">Entrer ton PIN pour modifier</span>
+      <input type="text" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••">
+      <button id="pinSubmitBtn">Déverrouiller</button>
+      <span class="pin-msg" id="pinMsg"></span>
+    `;
+    document.getElementById('pinSubmitBtn').addEventListener('click', submitPin);
+  }
+}
+async function submitPin(){
+  const pinInput = document.getElementById('pinInput');
+  const pinMsg = document.getElementById('pinMsg');
+  const pin = pinInput.value.trim();
+  pinInput.value = '';
+  if(!pin) return;
+  try {
+    const { data, error } = await supabase.rpc('verify_pin', { p_email: currentSessionEmail, p_pin: pin });
+    if(error){
+      pinMsg.textContent = error.message;
+      return;
+    }
+    if(data === true){
+      pinUnlockedUntil = Date.now() + PIN_UNLOCK_MS;
+      updateEditUI();
+    } else {
+      pinMsg.textContent = (typeof data === 'string' && data) ? data : 'PIN incorrect.';
+    }
+  } catch(err){
+    pinMsg.textContent = 'Erreur : ' + (err && err.message ? err.message : 'la vérification a échoué.');
+  }
+}
+setInterval(() => {
+  if(pinUnlockedUntil && Date.now() >= pinUnlockedUntil){
+    pinUnlockedUntil = 0;
+    updateEditUI();
+  }
+}, 15000);
+
+// ---------- connexion ----------
+const loginScreen = document.getElementById('loginScreen');
+const mainWrap = document.getElementById('mainWrap');
+const loginBtn = document.getElementById('loginBtn');
+const loginEmail = document.getElementById('loginEmail');
+const loginMsg = document.getElementById('loginMsg');
+
+loginBtn.addEventListener('click', async () => {
+  const email = loginEmail.value.trim();
+  if(!email) return;
+  loginBtn.disabled = true;
+  loginMsg.textContent = '';
+  try {
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    loginMsg.textContent = error ? 'Erreur : ' + error.message : 'Lien envoyé — vérifiez votre courriel.';
+  } catch (err) {
+    loginMsg.textContent = 'Erreur : ' + (err && err.message ? err.message : 'la demande a échoué, réessaie.');
+  } finally {
+    loginBtn.disabled = false;
+  }
+});
+
+async function showForSession(session){
+  if(session){
+    loginScreen.style.display = 'none';
+    mainWrap.style.display = 'block';
+    document.getElementById('pinBox').style.display = 'flex';
+    currentSessionEmail = session.user.email;
+    updateEditUI();
+    await loadStops();
+  } else {
+    loginScreen.style.display = 'flex';
+    mainWrap.style.display = 'none';
+    document.getElementById('pinBox').style.display = 'none';
+    currentSessionEmail = null;
+    pinUnlockedUntil = 0;
+  }
+}
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  showForSession(session);
+});
+
+const { data: { session } } = await supabase.auth.getSession();
+showForSession(session);
 
 // ---------- subtle parallax on hero photo ----------
 (function(){
