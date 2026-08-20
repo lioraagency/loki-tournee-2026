@@ -837,18 +837,66 @@ async function deleteStop(stopId){
 }
 
 // ---------- ajout d'une fiche ----------
+const VILLES_PAR_PROVINCE = {
+  ON: [
+    { value: 'Toronto', label: 'Toronto' },
+    { value: 'Ottawa', label: 'Ottawa' },
+    { value: 'Muskoka', label: 'Muskoka' },
+  ],
+  MB: [
+    { value: 'Winnipeg', label: 'Winnipeg' },
+  ],
+  SK: [
+    { value: 'Regina', label: 'Regina' },
+    { value: 'Saskatoon', label: 'Saskatoon' },
+  ],
+  AB: [
+    { value: 'Calgary', label: 'Calgary' },
+    { value: 'Banff', label: 'Banff' },
+    { value: 'Edmonton', label: 'Edmonton' },
+    { value: 'Jasper', label: 'Jasper' },
+  ],
+  BC: [
+    { value: 'Vancouver', label: 'Vancouver' },
+    { value: 'Kelowna', label: 'Kelowna' },
+    { value: 'Whistler', label: 'Whistler' },
+  ],
+};
+const VILLE_AUTRE_VALUE = '__autre__';
+
 function openAddForm(){
   const el = document.getElementById('addModalContent');
   const catOptions = CAT_ORDER.map(c => `<option value="${c}">${CATS[c].label}</option>`).join('');
+  const provOptions = PROV_ORDER.map(p => `<option value="${p}">${PROV_LABEL[p]}</option>`).join('');
   el.innerHTML = `
     <button class="modal-close" id="addModalCloseBtn">✕</button>
     <form class="stop-form" id="addStopForm">
       <h2>Ajouter une fiche</h2>
       <div><label for="f_categorie">Catégorie</label><select id="f_categorie" required>${catOptions}</select></div>
       <div><label for="f_nom">Nom</label><input id="f_nom" required></div>
-      <div><label for="f_ville">Ville</label><input id="f_ville"></div>
-      <div><label for="f_prov">Province</label><input id="f_prov"></div>
-      <div><label for="f_priorite">Priorité</label><input id="f_priorite"></div>
+      <div><label for="f_prov">Province</label>
+        <select id="f_prov" required>
+          <option value="">— Choisir —</option>
+          ${provOptions}
+        </select>
+      </div>
+      <div><label for="f_ville">Ville</label>
+        <select id="f_ville" disabled>
+          <option value="">— Choisir une province d'abord —</option>
+        </select>
+      </div>
+      <div id="f_ville_autre_wrap" style="display:none;">
+        <label for="f_ville_autre">Nom de la ville</label>
+        <input id="f_ville_autre" placeholder="Nom de la ville">
+      </div>
+      <div><label for="f_priorite">Priorité</label>
+        <select id="f_priorite">
+          <option value="">Non priorisée</option>
+          <option value="P1">P1</option>
+          <option value="P2">P2</option>
+          <option value="P3">P3</option>
+        </select>
+      </div>
       <div><label for="f_pertinence">Pertinence</label><input id="f_pertinence"></div>
       <div><label for="f_adresse">Adresse</label><input id="f_adresse"></div>
       <div><label for="f_contact">Contact</label><input id="f_contact"></div>
@@ -863,6 +911,26 @@ function openAddForm(){
   `;
   document.getElementById('addModalCloseBtn').addEventListener('click', closeAddForm);
   document.getElementById('addCancelBtn').addEventListener('click', closeAddForm);
+  document.getElementById('f_prov').addEventListener('change', () => {
+    const prov = document.getElementById('f_prov').value;
+    const villeSelect = document.getElementById('f_ville');
+    const autreWrap = document.getElementById('f_ville_autre_wrap');
+    autreWrap.style.display = 'none';
+    document.getElementById('f_ville_autre').value = '';
+    if(!prov){
+      villeSelect.innerHTML = `<option value="">— Choisir une province d'abord —</option>`;
+      villeSelect.disabled = true;
+      return;
+    }
+    const villes = VILLES_PAR_PROVINCE[prov] || [];
+    const villeOptions = villes.map(v => `<option value="${v.value}">${v.label}</option>`).join('');
+    villeSelect.innerHTML = `<option value="">— Choisir —</option>${villeOptions}<option value="${VILLE_AUTRE_VALUE}">Autre (préciser)</option>`;
+    villeSelect.disabled = false;
+  });
+  document.getElementById('f_ville').addEventListener('change', () => {
+    const isAutre = document.getElementById('f_ville').value === VILLE_AUTRE_VALUE;
+    document.getElementById('f_ville_autre_wrap').style.display = isAutre ? '' : 'none';
+  });
   document.getElementById('addStopForm').addEventListener('submit', (e) => {
     e.preventDefault();
     submitNewStop();
@@ -878,12 +946,25 @@ function fieldOrNull(id){
 }
 async function submitNewStop(){
   if(!isPinUnlocked()) return;
+  const prov = document.getElementById('f_prov').value;
+  const villeValue = document.getElementById('f_ville').value;
+  let ville = null;
+  let city_key = null;
+  if(villeValue === VILLE_AUTRE_VALUE){
+    ville = fieldOrNull('f_ville_autre');
+    city_key = null;
+  } else if(villeValue){
+    const entry = (VILLES_PAR_PROVINCE[prov] || []).find(v => v.value === villeValue);
+    ville = entry ? entry.label : villeValue;
+    city_key = villeValue;
+  }
   const payload = {
     id: crypto.randomUUID(),
     categorie: document.getElementById('f_categorie').value,
     nom: document.getElementById('f_nom').value.trim(),
-    ville: fieldOrNull('f_ville'),
-    prov: fieldOrNull('f_prov'),
+    prov: prov || null,
+    ville,
+    city_key,
     priorite: fieldOrNull('f_priorite'),
     pertinence: fieldOrNull('f_pertinence'),
     adresse: fieldOrNull('f_adresse'),
