@@ -16,7 +16,7 @@ begin
     raise exception 'Identité de session invalide. Reconnecte-toi avec ton nom et ton PIN.';
   end if;
 
-  select * into rec from user_pins where person_key = lower(p_person_key);
+  select * into rec from user_pins where person_key = session_person;
   if not found then
     return false;
   end if;
@@ -29,11 +29,11 @@ begin
     update user_pins
       set failed_attempts = failed_attempts + 1,
           locked_until = case when failed_attempts + 1 >= 5 then now() + interval '15 minutes' else locked_until end
-      where person_key = lower(p_person_key);
+      where person_key = session_person;
     return false;
   end if;
 
-  update user_pins set failed_attempts = 0, locked_until = null where person_key = lower(p_person_key);
+  update user_pins set failed_attempts = 0, locked_until = null where person_key = session_person;
 
   delete from notes where id = p_note_id returning * into note_rec;
   if note_rec.id is null then
@@ -41,7 +41,7 @@ begin
   end if;
 
   insert into activity_log(stop_id, champ_modifie, ancienne_valeur, nouvelle_valeur, modifie_par)
-  values (note_rec.stop_id, 'note_supprimee', note_rec.texte, null, p_person_key);
+  values (note_rec.stop_id, 'note_supprimee', note_rec.texte, null, session_person);
 
   return true;
 end;
