@@ -1032,7 +1032,7 @@ function openDeleteNoteConfirm(noteId, stopId){
   el.innerHTML = `
     <p>Êtes-vous certain de vouloir supprimer cette note ? Cette action est irréversible.</p>
     <div class="note-add-row" style="justify-content:center;">
-      <input type="text" id="deleteNotePinInput" inputmode="numeric" maxlength="4" placeholder="••••" style="flex:none;width:90px;">
+      <input type="password" id="deleteNotePinInput" inputmode="numeric" maxlength="4" placeholder="••••" style="flex:none;width:90px;">
     </div>
     <p class="form-msg" id="deleteNoteMsg"></p>
     <div class="form-actions">
@@ -1049,6 +1049,10 @@ async function confirmDeleteNote(noteId, stopId){
   const msg = document.getElementById('deleteNoteMsg');
   const pin = pinInput.value.trim();
   if(!pin) return;
+  if(!/^\d{4}$/.test(pin)){
+    msg.textContent = 'Le PIN doit contenir exactement 4 chiffres';
+    return;
+  }
   try {
     const { data, error } = await supabase.rpc('delete_note_with_pin', {
       p_note_id: noteId,
@@ -1062,7 +1066,11 @@ async function confirmDeleteNote(noteId, stopId){
     }
     if(data === true){
       closeConfirmModal();
-      await loadNotesList(stopId);
+      try {
+        await loadNotesList(stopId);
+      } catch(refreshErr){
+        console.error(refreshErr);
+      }
     } else {
       msg.textContent = 'PIN incorrect.';
       pinInput.value = '';
