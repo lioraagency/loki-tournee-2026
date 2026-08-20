@@ -474,14 +474,14 @@ function resolveColor(catKey){
 function computeDotPositions(){
   const groups = {};
   DATA.forEach(d => {
-    const key = d.cityKey;
+    const key = d.city_key;
     if(!groups[key]) groups[key] = [];
     groups[key].push(d);
   });
   Object.values(groups).forEach(list => {
     const n = list.length;
     list.forEach((d, i) => {
-      const base = CITY_COORDS[d.cityKey];
+      const base = CITY_COORDS[d.city_key];
       if(!base){ d._x = 450; d._y = 300; return; }
       if(n === 1){ d._x = base.x; d._y = base.y; return; }
       const angle = (2*Math.PI*i/n) - Math.PI/2;
