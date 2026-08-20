@@ -293,6 +293,8 @@
   .note-item{border-bottom:1px solid rgba(255,255,255,0.08);padding:10px 0;}
   .note-item p{margin:0;font-size:13.5px;color:var(--text);}
   .note-item .note-auteur{margin:4px 0 0;font-size:11.5px;color:var(--text-faint);}
+  .note-delete-link{color:var(--text-faint);text-decoration:underline;}
+  .note-delete-link:hover{color:var(--text-dim);}
   .note-add-row{display:flex;gap:8px;margin-top:10px;}
   .note-add-row input{
     flex:1;padding:9px 11px;border-radius:8px;border:1px solid var(--border);
@@ -314,6 +316,8 @@
   .confirm-modal p{font-size:14.5px;color:var(--text);line-height:1.6;margin-bottom:22px;}
   .confirm-modal .form-actions{display:flex;gap:10px;justify-content:center;}
   .confirm-modal .btn-danger{padding:9px 18px;border-radius:8px;border:none;background:#c0392b;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;}
+  .confirm-modal .btn-secondary{padding:9px 18px;border-radius:8px;border:1px solid var(--glass-border);background:none;color:var(--text-dim);cursor:pointer;font-family:inherit;}
+  #deleteNoteConfirmBtn{background-color:#FF4500;color:#fff;}
 
   @media (max-width: 720px){
     h1.title{font-size:26px;}
@@ -421,6 +425,7 @@ async function loadStops(){
 }
 
 let currentPersonName = null;
+let currentPersonKey = null;
 let pinUnlockedUntil = 0;
 const PIN_UNLOCK_MS = 20 * 60 * 1000;
 function isPinUnlocked(){
@@ -996,9 +1001,15 @@ async function loadNotesList(stopId){
   list.innerHTML = data.map(n => `
     <div class="note-item">
       <p>${escapeHtml(n.texte)}</p>
-      <p class="note-auteur">${escapeHtml(n.auteur)}</p>
+      <p class="note-auteur">${escapeHtml(n.auteur)} · <a href="#" class="note-delete-link" data-note-id="${escapeHtml(n.id)}">Supprimer</a></p>
     </div>
   `).join('');
+  list.querySelectorAll('.note-delete-link').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      openDeleteNoteConfirm(el.dataset.noteId, stopId);
+    });
+  });
 }
 async function addNote(stopId){
   if(!isPinUnlocked()) return;
@@ -1014,6 +1025,60 @@ async function addNote(stopId){
   input.value = '';
   msg.textContent = '';
   await loadNotesList(stopId);
+}
+
+function openDeleteNoteConfirm(noteId, stopId){
+  const el = document.getElementById('confirmModalContent');
+  el.innerHTML = `
+    <p>Êtes-vous certain de vouloir supprimer cette note ? Cette action est irréversible.</p>
+    <div class="note-add-row" style="justify-content:center;">
+      <input type="password" id="deleteNotePinInput" inputmode="numeric" maxlength="4" placeholder="••••" style="flex:none;width:90px;">
+    </div>
+    <p class="form-msg" id="deleteNoteMsg"></p>
+    <div class="form-actions">
+      <button class="btn-secondary" id="deleteNoteCancelBtn">Annuler</button>
+      <button class="btn-danger" id="deleteNoteConfirmBtn">Supprimer définitivement</button>
+    </div>
+  `;
+  document.getElementById('deleteNoteCancelBtn').addEventListener('click', closeConfirmModal);
+  document.getElementById('deleteNoteConfirmBtn').addEventListener('click', () => confirmDeleteNote(noteId, stopId));
+  document.getElementById('confirmModalOverlay').classList.add('open');
+}
+async function confirmDeleteNote(noteId, stopId){
+  const pinInput = document.getElementById('deleteNotePinInput');
+  const msg = document.getElementById('deleteNoteMsg');
+  const pin = pinInput.value.trim();
+  if(!pin) return;
+  if(!/^\d{4}$/.test(pin)){
+    msg.textContent = 'Le PIN doit contenir exactement 4 chiffres';
+    return;
+  }
+  try {
+    const { data, error } = await supabase.rpc('delete_note_with_pin', {
+      p_note_id: noteId,
+      p_person_key: currentPersonKey,
+      p_pin: pin,
+    });
+    if(error){
+      msg.textContent = error.message;
+      pinInput.value = '';
+      return;
+    }
+    if(data === true){
+      closeConfirmModal();
+      try {
+        await loadNotesList(stopId);
+      } catch(refreshErr){
+        console.error(refreshErr);
+      }
+    } else {
+      msg.textContent = 'PIN incorrect.';
+      pinInput.value = '';
+    }
+  } catch(err){
+    msg.textContent = 'Erreur : ' + (err && err.message ? err.message : 'la suppression a échoué.');
+    pinInput.value = '';
+  }
 }
 
 // ---------- déverrouillage PIN ----------
@@ -1051,6 +1116,7 @@ async function submitPin(){
     if(data === true){
       const person = PIN_OPTIONS.find(p => p.person_key === personKey);
       currentPersonName = person ? person.nom_affiche : personKey;
+      currentPersonKey = personKey;
       pinUnlockedUntil = Date.now() + PIN_UNLOCK_MS;
       updateEditUI();
     } else {
@@ -1063,6 +1129,7 @@ async function submitPin(){
 setInterval(() => {
   if(pinUnlockedUntil && Date.now() >= pinUnlockedUntil){
     pinUnlockedUntil = 0;
+    currentPersonKey = null;
     updateEditUI();
   }
 }, 15000);
