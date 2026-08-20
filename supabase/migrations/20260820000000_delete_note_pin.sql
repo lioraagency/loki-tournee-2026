@@ -10,7 +10,8 @@ begin
     raise exception 'Session invalide, recharge la page.';
   end if;
 
-  select person_key into session_person from pin_unlocks where session_uid = auth.uid();
+  select person_key into session_person from pin_unlocks
+    where session_uid = auth.uid() and unlocked_until > now();
   if session_person is null or session_person <> lower(p_person_key) then
     raise exception 'Identité de session invalide. Reconnecte-toi avec ton nom et ton PIN.';
   end if;
