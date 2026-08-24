@@ -11,10 +11,9 @@
 --     (ni dans pg_proc, ni dans pg_policies) ; reconstruit à partir d'indices
 --     indirects (colonnes visibles via l'API REST, comportement observé).
 
--- [DÉDUIT AVEC JUSTIFICATION] Colonnes confirmées via information_schema.columns.
--- La contrainte primary key sur person_key n'a pas été vue directement dans
--- pg_constraint : elle est déduite de l'usage "on conflict (person_key)" dans
--- set_user_pin (comportement rapporté, code de la fonction non fourni).
+-- [CONFIRMÉ VERBATIM] Colonnes confirmées via information_schema.columns.
+-- Contrainte primary key sur person_key (user_pins_pkey) confirmée directement
+-- via pg_constraint.
 create table if not exists user_pins (
   person_key text not null primary key,
   pin_hash text not null,
@@ -30,14 +29,16 @@ create table if not exists user_pins (
 -- set_user_pin) y accèdent, en contournant RLS par leur nature même.
 alter table user_pins enable row level security;
 
--- [DÉDUIT AVEC JUSTIFICATION] Colonnes confirmées via information_schema.columns.
--- La contrainte primary key sur session_uid n'a pas été vue directement dans
--- pg_constraint : elle est déduite de l'usage "on conflict (session_uid)" dans
--- verify_pin (comportement rapporté, code de la fonction non fourni).
+-- [CONFIRMÉ VERBATIM] Colonnes confirmées via information_schema.columns.
+-- Contrainte primary key sur session_uid (pin_unlocks_pkey) confirmée
+-- directement via pg_constraint. Foreign key (person_key) vers
+-- user_pins(person_key) confirmée via pg_get_constraintdef : aucun ON DELETE
+-- ni ON UPDATE explicite, donc NO ACTION par défaut sur les deux.
 create table if not exists pin_unlocks (
   session_uid uuid not null primary key,
   person_key text not null,
-  unlocked_until timestamptz not null
+  unlocked_until timestamptz not null,
+  foreign key (person_key) references user_pins(person_key)
 );
 
 -- [RECONSTRUCTION PROBABLE, NON CONFIRMÉE] Cette vue n'a jamais été vue en SQL
