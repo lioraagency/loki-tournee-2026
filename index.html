@@ -449,12 +449,16 @@ const PIN_UNLOCK_MS = 8 * 60 * 60 * 1000;
 function isPinUnlocked(){
   return Date.now() < pinUnlockedUntil;
 }
-function showPinExpired(){
+function showPinExpired(messageElementId){
   pinUnlockedUntil = 0;
   currentPersonKey = null;
   updateEditUI();
   const pinMsg = document.getElementById('pinMsg');
   if(pinMsg) pinMsg.textContent = 'Session expirée, réentre ton PIN pour continuer.';
+  if(messageElementId){
+    const localMsg = document.getElementById(messageElementId);
+    if(localMsg) localMsg.textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+  }
 }
 
 let PIN_OPTIONS = [];
@@ -833,7 +837,7 @@ function closeConfirmModal(){
 }
 async function deleteStop(stopId){
   if(!isPinUnlocked()){
-    document.getElementById('deleteMsg').textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+    showPinExpired('deleteMsg');
     return;
   }
   const { error } = await supabase.from('stops').update({ archived: true }).eq('id', stopId);
@@ -956,7 +960,7 @@ function fieldOrNull(id){
 }
 async function submitNewStop(){
   if(!isPinUnlocked()){
-    document.getElementById('addFormMsg').textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+    showPinExpired('addFormMsg');
     return;
   }
   const prov = document.getElementById('f_prov').value;
@@ -1004,7 +1008,13 @@ document.getElementById('addStopBtn').addEventListener('click', () => {
 
 // ---------- modification d'une fiche ----------
 async function enterEditMode(id){
-  if(!isPinUnlocked()){ showPinExpired(); return; }
+  if(!isPinUnlocked()){
+    if(document.getElementById('modalOverlay').classList.contains('open')){
+      closeModal();
+    }
+    showPinExpired();
+    return;
+  }
   const { data, error } = await supabase.from('stops').select('*').eq('id', id).single();
   if(error){ console.error(error); return; }
   renderModalEdit(data);
@@ -1050,7 +1060,7 @@ function renderModalEdit(row){
 async function saveStopEdits(id){
   const msg = document.getElementById('editFormMsg');
   if(!isPinUnlocked()){
-    msg.textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+    showPinExpired('editFormMsg');
     return;
   }
   const nom = document.getElementById('e_nom').value.trim();
@@ -1129,7 +1139,7 @@ async function loadNotesList(stopId){
 async function addNote(stopId){
   const msg = document.getElementById('noteFormMsg');
   if(!isPinUnlocked()){
-    msg.textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+    showPinExpired('noteFormMsg');
     return;
   }
   const input = document.getElementById('newNoteInput');
