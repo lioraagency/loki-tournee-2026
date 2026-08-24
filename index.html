@@ -841,20 +841,16 @@ async function deleteStop(stopId){
     return;
   }
   const deleteMsgEl = document.getElementById('deleteMsg');
-  const debugSession = await supabase.auth.getSession();
-  const debugUserId = debugSession && debugSession.data && debugSession.data.session ? debugSession.data.session.user.id : null;
-  deleteMsgEl.textContent = `[debug] stopId=${stopId} | isPinUnlocked()=${isPinUnlocked()} | session.user.id=${debugUserId}`;
   const { data, error } = await supabase.from('stops')
     .update({ archived: true }).eq('id', stopId).select();
   if(error){
-    deleteMsgEl.textContent += ' — Erreur : ' + error.message;
+    deleteMsgEl.textContent = 'Erreur : ' + error.message;
     return;
   }
   if(!data || data.length === 0){
-    deleteMsgEl.textContent += ' — Aucune ligne modifiée — id introuvable ou bloqué silencieusement';
+    deleteMsgEl.textContent = 'Aucune ligne modifiée — id introuvable ou bloqué silencieusement';
     return;
   }
-  deleteMsgEl.textContent += ' — Succès, ligne modifiée.';
   closeConfirmModal();
   closeModal();
   await loadStops();
