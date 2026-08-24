@@ -445,9 +445,16 @@ async function loadStops(){
 let currentPersonName = null;
 let currentPersonKey = null;
 let pinUnlockedUntil = 0;
-const PIN_UNLOCK_MS = 20 * 60 * 1000;
+const PIN_UNLOCK_MS = 8 * 60 * 60 * 1000;
 function isPinUnlocked(){
   return Date.now() < pinUnlockedUntil;
+}
+function showPinExpired(){
+  pinUnlockedUntil = 0;
+  currentPersonKey = null;
+  updateEditUI();
+  const pinMsg = document.getElementById('pinMsg');
+  if(pinMsg) pinMsg.textContent = 'Session expirée, réentre ton PIN pour continuer.';
 }
 
 let PIN_OPTIONS = [];
@@ -825,7 +832,10 @@ function closeConfirmModal(){
   document.getElementById('confirmModalOverlay').classList.remove('open');
 }
 async function deleteStop(stopId){
-  if(!isPinUnlocked()) return;
+  if(!isPinUnlocked()){
+    document.getElementById('deleteMsg').textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+    return;
+  }
   const { error } = await supabase.from('stops').update({ archived: true }).eq('id', stopId);
   if(error){
     document.getElementById('deleteMsg').textContent = 'Erreur : ' + error.message;
@@ -945,7 +955,10 @@ function fieldOrNull(id){
   return v === '' ? null : v;
 }
 async function submitNewStop(){
-  if(!isPinUnlocked()) return;
+  if(!isPinUnlocked()){
+    document.getElementById('addFormMsg').textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+    return;
+  }
   const prov = document.getElementById('f_prov').value;
   const villeValue = document.getElementById('f_ville').value;
   let ville = null;
@@ -985,13 +998,13 @@ async function submitNewStop(){
   await loadStops();
 }
 document.getElementById('addStopBtn').addEventListener('click', () => {
-  if(!isPinUnlocked()) return;
+  if(!isPinUnlocked()){ showPinExpired(); return; }
   openAddForm();
 });
 
 // ---------- modification d'une fiche ----------
 async function enterEditMode(id){
-  if(!isPinUnlocked()) return;
+  if(!isPinUnlocked()){ showPinExpired(); return; }
   const { data, error } = await supabase.from('stops').select('*').eq('id', id).single();
   if(error){ console.error(error); return; }
   renderModalEdit(data);
@@ -1035,8 +1048,11 @@ function renderModalEdit(row){
   renderNotesSection(row.id);
 }
 async function saveStopEdits(id){
-  if(!isPinUnlocked()) return;
   const msg = document.getElementById('editFormMsg');
+  if(!isPinUnlocked()){
+    msg.textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+    return;
+  }
   const nom = document.getElementById('e_nom').value.trim();
   if(!nom){
     msg.textContent = 'Le nom est requis.';
@@ -1111,9 +1127,12 @@ async function loadNotesList(stopId){
   });
 }
 async function addNote(stopId){
-  if(!isPinUnlocked()) return;
-  const input = document.getElementById('newNoteInput');
   const msg = document.getElementById('noteFormMsg');
+  if(!isPinUnlocked()){
+    msg.textContent = 'Session PIN expirée, réentre ton PIN pour continuer.';
+    return;
+  }
+  const input = document.getElementById('newNoteInput');
   const texte = input.value.trim();
   if(!texte) return;
   const { error } = await supabase.from('notes').insert({ stop_id: stopId, texte, auteur: currentPersonName });
