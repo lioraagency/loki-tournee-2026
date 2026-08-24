@@ -456,6 +456,13 @@ async function loadPinOptions(){
   if(error){ console.error(error); return; }
   PIN_OPTIONS = data || [];
 }
+function formatDropdownName(nomAffiche){
+  const parts = nomAffiche.trim().split(/\s+/);
+  if(parts.length < 2) return nomAffiche;
+  const prenom = parts[0];
+  const nom = parts[parts.length - 1];
+  return `${prenom} ${nom.charAt(0)}.`;
+}
 
 const CATS = {
   'Porsche':     { color:'var(--c-porsche)',    label:'Porsche' },
@@ -1188,7 +1195,7 @@ function updateEditUI(){
   if(unlocked){
     pinBox.innerHTML = `<span class="pin-connected">Connecté comme : ${escapeHtml(currentPersonName)}</span>`;
   } else {
-    const options = PIN_OPTIONS.map(p => `<option value="${escapeHtml(p.person_key)}">${escapeHtml(p.nom_affiche)}</option>`).join('');
+    const options = PIN_OPTIONS.map(p => `<option value="${escapeHtml(p.person_key)}">${escapeHtml(formatDropdownName(p.nom_affiche))}</option>`).join('');
     pinBox.innerHTML = `
       <select id="pinPersonSelect">${options}</select>
       <input type="text" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••">
