@@ -103,6 +103,17 @@ $function$;
 -- dollar-quoting $function$ vs $$, et l'ordre des clauses LANGUAGE/SECURITY
 -- DEFINER avant/après le corps — sans effet sur le comportement). Aucun écart
 -- réel constaté ; la version déjà trackée était donc exacte.
+--
+-- Note sur un faux positif CodeRabbit (revue de cette PR) : un finding a
+-- signalé que v_person (text) serait incompatible avec stops.updated_by et
+-- activity_log.modifie_par, déclarés `uuid` dans 20260818000000_init_stops.sql.
+-- Vérifié via information_schema.columns : les deux colonnes sont en réalité
+-- TEXT en prod, pas uuid — le fichier de schéma original est périmé sur ce
+-- point précis (déjà divergent de la prod avant même ce trigger). Preuve
+-- additionnelle : stops.updated_by contient déjà la valeur texte
+-- "louis-philippe.deblois@lokicoach.com" suite à un test réel réussi. v_person
+-- (text) est donc le bon type à utiliser tel quel ; ne pas le remplacer par
+-- auth.uid() comme suggéré, ça changerait un comportement qui fonctionne.
 CREATE OR REPLACE FUNCTION public.log_stop_changes()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -180,3 +191,19 @@ create policy "lecture_avec_pin" on stops
 -- sont bien absentes de la prod actuelle avant de fusionner.
 drop policy if exists "lecture_authentifie" on stops;
 drop policy if exists "ecriture_authentifie" on stops;
+
+-- Réponse au finding CodeRabbit sur pin_unlocks : cette table n'avait aucune
+-- policy de lecture documentée. Chaque session ne doit voir que sa propre
+-- ligne de déverrouillage.
+create policy "lecture_propre" on pin_unlocks
+  for select to authenticated
+  using (session_uid = auth.uid());
+
+-- Réponse au finding CodeRabbit critique sur set_user_pin : SECURITY DEFINER
+-- sans vérification d'autorité interne, et EXECUTE accordé à PUBLIC par
+-- défaut à la création. On retire explicitement ce droit à tous les rôles
+-- applicatifs — cette fonction ne doit être appelable par personne via l'API,
+-- seulement par un contexte administratif (ex. service role, hors RLS).
+revoke execute on function public.set_user_pin(text, text) from public;
+revoke execute on function public.set_user_pin(text, text) from anon;
+revoke execute on function public.set_user_pin(text, text) from authenticated;
