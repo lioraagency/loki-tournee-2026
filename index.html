@@ -840,9 +840,14 @@ async function deleteStop(stopId){
     showPinExpired('deleteMsg');
     return;
   }
-  const { error } = await supabase.from('stops').update({ archived: true }).eq('id', stopId);
+  const { data, error } = await supabase.from('stops')
+    .update({ archived: true }).eq('id', stopId).select();
   if(error){
     document.getElementById('deleteMsg').textContent = 'Erreur : ' + error.message;
+    return;
+  }
+  if(!data || data.length === 0){
+    document.getElementById('deleteMsg').textContent = 'Aucune ligne modifiée — id introuvable ou bloqué silencieusement';
     return;
   }
   closeConfirmModal();
