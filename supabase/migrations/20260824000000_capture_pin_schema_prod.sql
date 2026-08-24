@@ -23,6 +23,12 @@ create table if not exists user_pins (
   updated_at timestamptz default now(),
   nom_affiche text
 );
+-- Ajout suite au constat sur pin_unlocks (RLS non activée = policy inerte) :
+-- cette table contient pin_hash, elle ne doit jamais être lisible directement
+-- via l'API. RLS activée sans aucune policy = accès refusé par défaut à tout
+-- rôle client ; seules les fonctions SECURITY DEFINER (verify_pin,
+-- set_user_pin) y accèdent, en contournant RLS par leur nature même.
+alter table user_pins enable row level security;
 
 -- [DÉDUIT AVEC JUSTIFICATION] Colonnes confirmées via information_schema.columns.
 -- La contrainte primary key sur session_uid n'a pas été vue directement dans
@@ -110,10 +116,20 @@ $function$;
 -- Vérifié via information_schema.columns : les deux colonnes sont en réalité
 -- TEXT en prod, pas uuid — le fichier de schéma original est périmé sur ce
 -- point précis (déjà divergent de la prod avant même ce trigger). Preuve
--- additionnelle : stops.updated_by contient déjà la valeur texte
--- "louis-philippe.deblois@lokicoach.com" suite à un test réel réussi. v_person
--- (text) est donc le bon type à utiliser tel quel ; ne pas le remplacer par
--- auth.uid() comme suggéré, ça changerait un comportement qui fonctionne.
+-- additionnelle : stops.updated_by contient déjà une valeur texte de la forme
+-- "prenom.nom@domaine" (adresse courriel réelle d'une personne, volontairement
+-- non reproduite ici) suite à un test réel réussi. v_person (text) est donc le
+-- bon type à utiliser tel quel ; ne pas le remplacer par auth.uid() comme
+-- suggéré, ça changerait un comportement qui fonctionne.
+--
+-- ⚠️ Reste néanmoins un vrai problème pour une base reconstruite depuis zéro :
+-- 20260818000000_init_stops.sql déclare toujours updated_by/modifie_par en
+-- uuid. Un "supabase db reset" ou un nouvel environnement partant de zéro
+-- obtiendrait des colonnes uuid, et ce trigger y échouerait alors qu'il
+-- fonctionne sur la prod actuelle (déjà dérivée en text). Cette migration ne
+-- corrige pas cet écart de schéma — à traiter séparément (ALTER COLUMN vers
+-- text dans une migration dédiée, ou documenter explicitement que ce trigger
+-- suppose un rebuild à partir de la prod réelle, pas d'un schéma vierge).
 CREATE OR REPLACE FUNCTION public.log_stop_changes()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -195,6 +211,11 @@ drop policy if exists "ecriture_authentifie" on stops;
 -- Réponse au finding CodeRabbit sur pin_unlocks : cette table n'avait aucune
 -- policy de lecture documentée. Chaque session ne doit voir que sa propre
 -- ligne de déverrouillage.
+-- Correctif suite à une seconde revue CodeRabbit : la table pin_unlocks
+-- (create table if not exists plus haut) n'avait jamais RLS activé — sans ça,
+-- la policy ci-dessous serait inerte et n'importe quel rôle avec accès select
+-- pourrait lire toute la table.
+alter table pin_unlocks enable row level security;
 create policy "lecture_propre" on pin_unlocks
   for select to authenticated
   using (session_uid = auth.uid());
